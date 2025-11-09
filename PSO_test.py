@@ -27,13 +27,23 @@ def rotatefunc(x, Mr, nx):
 def asyfunc(x, beta):
     """Asymmetric transformation."""
     nx = len(x)
-    y = x[:]  # copy
+    y = x[:]  # start from original values (matches C behaviour)
     if nx <= 1:
         return y
+
+    MAX_VAL = 1e150  # large but safe; avoids inf in later math.floor()
+
     for i in range(nx):
-        if y[i] > 0:
+        if y[i] > 0.0:
             exponent = 1.0 + beta * i / (nx - 1) * math.sqrt(y[i])
-            y[i] = math.pow(y[i], exponent)
+            try:
+                val = math.pow(y[i], exponent)
+            except OverflowError:
+                val = MAX_VAL
+            if val > MAX_VAL:
+                val = MAX_VAL
+            y[i] = val
+
     return y
 
 
@@ -711,43 +721,146 @@ def test_func(x_flat, nx, mx, func_num, OShift, M):
 
 
 def main():
-    T_max = 500   # PSO iterations
-    rr = 10       # trials
-    nx = 5        # dimension
-    np = 20       # number of particles
-
+    T_max = 500      # PSO run time
+    rr = 10          # trials
+    nx = 5           # dimension
+    np = 20          # number of particles
     cf_num = 10
-    x_bound = [100.0] * nx  # kept for parity, not used further
+    sz = 200.0
+
+    # allocate arrays (same shapes as C code)
+    x = [0.0] * (np * nx)
+    v = [0.0] * (np * nx)
+    px = [0.0] * (np * nx)
+    gx = [0.0] * nx
+    pv = [0.0] * (np * nx)  # kept for parity with C, not used in active update
+    gv = [0.0] * nx         # kept for parity with C, not used in active update
+
+    fx = [0.0] * np
+    fv = [0.0] * np
+    pfx = [0.0] * np
+    pfv = [0.0] * np
+
+    x_bound = [100.0] * nx  # not used further, but matches C code
 
     # --- read rotation matrices M_D{nx}.txt ---
-    file_name = f"./inst/extdata/M_D{nx}.txt"
+    m_file = f"./inst/extdata/M_D{nx}.txt"
     try:
-        with open(file_name, "r") as fpt:
-            tokens = fpt.read().split()    # <- read all floats, split by whitespace
-            if len(tokens) < cf_num * nx * nx:
-                raise ValueError(
-                    f"Not enough values in {file_name}: "
-                    f"expected {cf_num * nx * nx}, got {len(tokens)}"
-                )
-            M = [float(tok) for tok in tokens[:cf_num * nx * nx]]
+        with open(m_file, "r") as fpt:
+            tokens = fpt.read().split()  # fscanf("%lf") equivalent
     except OSError:
-        raise RuntimeError("Cannot open input file for reading rotation matrices")
+        raise RuntimeError(f"Cannot open input file for reading: {m_file}")
+
+    expected_M = cf_num * nx * nx
+    if len(tokens) < expected_M:
+        raise RuntimeError(
+            f"Not enough values in {m_file}: expected {expected_M}, got {len(tokens)}"
+        )
+    M = [float(tok) for tok in tokens[:expected_M]]
 
     # --- read shift data shift_data.txt ---
-    file_name = "./inst/extdata/shift_data.txt"
+    s_file = "./inst/extdata/shift_data.txt"
     try:
-        with open(file_name, "r") as fpt:
+        with open(s_file, "r") as fpt:
             tokens = fpt.read().split()
-            if len(tokens) < cf_num * nx:
-                raise ValueError(
-                    f"Not enough values in {file_name}: "
-                    f"expected {cf_num * nx}, got {len(tokens)}"
-                )
-            OShift = [float(tok) for tok in tokens[:cf_num * nx]]
     except OSError:
-        raise RuntimeError("Cannot open input file for reading shift data")
+        raise RuntimeError(f"Cannot open input file for reading: {s_file}")
 
-    # ... rest of your main() stays the same ...
+    expected_O = cf_num * nx
+    if len(tokens) < expected_O:
+        raise RuntimeError(
+            f"Not enough values in {s_file}: expected {expected_O}, got {len(tokens)}"
+        )
+    OShift = [float(tok) for tok in tokens[:expected_O]]
+
+    # --- open output file ---
+    out_name = "D5N20T250R1f"
+    with open(out_name, "w") as dat:
+        w = -1.15
+        while w < 1.150001:
+            print(w)
+            a = 0.05
+            while a < 6.05:
+                ga = 0.0
+                a1 = 0.5 * a
+                a2 = a - a1
+
+                for func_num in range(1, 29):  # 1..28
+                    for _r in range(rr):
+                        gfx = 1.0e15
+                        gfv = 1.0e15
+
+                        # initialise swarm
+                        for i in range(np * nx):
+                            v[i] = (random.random() - 0.5) * 2.0
+                            x[i] = (random.random() - 0.5) * sz
+                            px[i] = x[i]
+                        for j in range(nx):
+                            gx[j] = (random.random() - 0.5) * sz
+
+                        # reset personal best fitness for this run
+                        for i in range(np):
+                            pfx[i] = INF
+                            pfv[i] = INF
+
+                        oo = False
+                        t = 0
+                        while t < T_max:
+                            fx = test_func(x, nx, np, func_num, OShift, M)
+                            fv = test_func(v, nx, np, func_num, OShift, M)
+
+                            # update personal / global best for x
+                            for n in range(np):
+                                if fx[n] < pfx[n]:
+                                    pfx[n] = fx[n]
+                                    base = n * nx
+                                    for j in range(nx):
+                                        px[base + j] = x[base + j]
+                                if fx[n] < gfx:
+                                    gfx = fx[n]
+                                    base = n * nx
+                                    for j in range(nx):
+                                        gx[j] = x[base + j]
+
+                            # update personal / global best for v (not used in current update rule)
+                            for n in range(np):
+                                if fv[n] < pfv[n]:
+                                    pfv[n] = fv[n]
+                                    base = n * nx
+                                    for j in range(nx):
+                                        pv[base + j] = v[base + j]
+                                if fv[n] < gfv:
+                                    gfv = fv[n]
+                                    base = n * nx
+                                    for j in range(nx):
+                                        gv[j] = v[base + j]
+
+                            # velocity and position update
+                            for i in range(np * nx):
+                                v[i] = (
+                                    w * v[i]
+                                    + a1 * random.random() * (px[i] - x[i])
+                                    + a2 * random.random() * (gx[i % nx] - x[i])
+                                )
+                                x[i] += v[i]
+
+                                if abs(x[i]) > 1.0e6 or abs(v[i]) > 1.0e6:
+                                    oo = True
+
+                            if oo:
+                                break
+                            t += 1
+
+                        ga += gfx if gfx < gfv else gfv
+
+                if ga > 100000.0:
+                    ga = 100000.0
+                dat.write(f"{a} {w} {ga / (28.0 * rr)}\n")
+                a += 0.1
+
+            dat.write("\n")
+            dat.flush()
+            w += 0.05
 
 
 
