@@ -12,17 +12,7 @@ def shiftfunc(x, Os):
     return [x[i] - Os[i] for i in range(nx)]
 
 
-def rotatefunc(x, Mr, nx):
-    """x: length nx, Mr: flattened rotation matrix (nx*nx)."""
-    xrot = [0.0] * nx
-    for i in range(nx):
-        s = 0.0
-        row_base = i * nx
-        for j in range(nx):
-            s += x[j] * Mr[row_base + j]
-        xrot[i] = s
-    return xrot
-
+# REMOVED: rotatefunc since we're not using rotation matrices anymore
 
 def asyfunc(x, beta):
     """Asymmetric transformation."""
@@ -99,25 +89,17 @@ def cf_cal(x, nx, Os, delta, bias, fit, cf_num):
     return f_val
 
 
-# --- basic functions ---
+# --- basic functions (modified to remove rotation) ---
 
 
-def sphere_func(x, nx, Os, Mr, r_flag):
+def sphere_func(x, nx, Os):
     y = shiftfunc(x, Os)
-    if r_flag == 1:
-        z = rotatefunc(y, Mr, nx)
-    else:
-        z = y
-    return sum(v * v for v in z)
+    return sum(v * v for v in y)
 
 
-def ellips_func(x, nx, Os, Mr, r_flag):
+def ellips_func(x, nx, Os):
     y = shiftfunc(x, Os)
-    if r_flag == 1:
-        z = rotatefunc(y, Mr, nx)
-    else:
-        z = y
-    y2 = oszfunc(z)
+    y2 = oszfunc(y)
     f = 0.0
     if nx == 1:
         return y2[0] * y2[0]
@@ -126,61 +108,40 @@ def ellips_func(x, nx, Os, Mr, r_flag):
     return f
 
 
-def bent_cigar_func(x, nx, Os, Mr, r_flag):
+def bent_cigar_func(x, nx, Os):
     beta = 0.5
     y = shiftfunc(x, Os)
-    if r_flag == 1:
-        z = rotatefunc(y, Mr, nx)
-    else:
-        z = y
-    y2 = asyfunc(z, beta)
-    if r_flag == 1:
-        Mr2 = Mr[nx * nx:]
-        z2 = rotatefunc(y2, Mr2, nx)
-    else:
-        z2 = y2
-    f = z2[0] * z2[0]
+    y2 = asyfunc(y, beta)
+    f = y2[0] * y2[0]
     for i in range(1, nx):
-        f += math.pow(10.0, 6.0) * z2[i] * z2[i]
+        f += math.pow(10.0, 6.0) * y2[i] * y2[i]
     return f
 
 
-def discus_func(x, nx, Os, Mr, r_flag):
+def discus_func(x, nx, Os):
     y = shiftfunc(x, Os)
-    if r_flag == 1:
-        z = rotatefunc(y, Mr, nx)
-    else:
-        z = y
-    y2 = oszfunc(z)
+    y2 = oszfunc(y)
     f = math.pow(10.0, 6.0) * y2[0] * y2[0]
     for i in range(1, nx):
         f += y2[i] * y2[i]
     return f
 
 
-def dif_powers_func(x, nx, Os, Mr, r_flag):
+def dif_powers_func(x, nx, Os):
     y = shiftfunc(x, Os)
-    if r_flag == 1:
-        z = rotatefunc(y, Mr, nx)
-    else:
-        z = y
     f = 0.0
     if nx == 1:
-        return abs(z[0]) ** 2.0
+        return abs(y[0]) ** 2.0
     for i in range(nx):
         exponent = 2.0 + 4.0 * i / (nx - 1)
-        f += math.pow(abs(z[i]), exponent)
+        f += math.pow(abs(y[i]), exponent)
     return math.sqrt(f)
 
 
-def rosenbrock_func(x, nx, Os, Mr, r_flag):
+def rosenbrock_func(x, nx, Os):
     y = shiftfunc(x, Os)
     y = [v * 2.048 / 100.0 for v in y]
-    if r_flag == 1:
-        z = rotatefunc(y, Mr, nx)
-    else:
-        z = y[:]
-    z = [v + 1.0 for v in z]
+    z = [v + 1.0 for v in y]
     f = 0.0
     for i in range(nx - 1):
         tmp1 = z[i] * z[i] - z[i + 1]
@@ -189,22 +150,13 @@ def rosenbrock_func(x, nx, Os, Mr, r_flag):
     return f
 
 
-def schaffer_F7_func(x, nx, Os, Mr, r_flag):
+def schaffer_F7_func(x, nx, Os):
     y = shiftfunc(x, Os)
-    if r_flag == 1:
-        z = rotatefunc(y, Mr, nx)
-    else:
-        z = y
-    y2 = asyfunc(z, 0.5)
+    y2 = asyfunc(y, 0.5)
     z2 = [y2[i] * math.pow(10.0, 1.0 * i / (nx - 1) / 2.0) for i in range(nx)]
-    if r_flag == 1:
-        Mr2 = Mr[nx * nx:]
-        y3 = rotatefunc(z2, Mr2, nx)
-    else:
-        y3 = z2
     if nx < 2:
         return 0.0
-    z3 = [math.sqrt(y3[i] * y3[i] + y3[i + 1] * y3[i + 1]) for i in range(nx - 1)]
+    z3 = [math.sqrt(z2[i] * z2[i] + z2[i + 1] * z2[i + 1]) for i in range(nx - 1)]
     f = 0.0
     for zi in z3:
         tmp = math.sin(50.0 * math.pow(zi, 0.2))
@@ -213,44 +165,26 @@ def schaffer_F7_func(x, nx, Os, Mr, r_flag):
     return f
 
 
-def ackley_func(x, nx, Os, Mr, r_flag):
+def ackley_func(x, nx, Os):
     y = shiftfunc(x, Os)
-    if r_flag == 1:
-        z = rotatefunc(y, Mr, nx)
-    else:
-        z = y
-    y2 = asyfunc(z, 0.5)
+    y2 = asyfunc(y, 0.5)
     z2 = [y2[i] * math.pow(10.0, 1.0 * i / (nx - 1) / 2.0) for i in range(nx)]
-    if r_flag == 1:
-        Mr2 = Mr[nx * nx:]
-        y3 = rotatefunc(z2, Mr2, nx)
-    else:
-        y3 = z2
 
     sum1 = 0.0
     sum2 = 0.0
     for i in range(nx):
-        sum1 += y3[i] * y3[i]
-        sum2 += math.cos(2.0 * PI * y3[i])
+        sum1 += z2[i] * z2[i]
+        sum2 += math.cos(2.0 * PI * z2[i])
     sum1 = -0.2 * math.sqrt(sum1 / nx)
     sum2 /= nx
     return E - 20.0 * math.exp(sum1) - math.exp(sum2) + 20.0
 
 
-def weierstrass_func(x, nx, Os, Mr, r_flag):
+def weierstrass_func(x, nx, Os):
     y = shiftfunc(x, Os)
     y = [v * 0.5 / 100.0 for v in y]
-    if r_flag == 1:
-        z = rotatefunc(y, Mr, nx)
-    else:
-        z = y
-    y2 = asyfunc(z, 0.5)
+    y2 = asyfunc(y, 0.5)
     z2 = [y2[i] * math.pow(10.0, 1.0 * i / (nx - 1) / 2.0) for i in range(nx)]
-    if r_flag == 1:
-        Mr2 = Mr[nx * nx:]
-        y3 = rotatefunc(z2, Mr2, nx)
-    else:
-        y3 = z2
 
     a = 0.5
     b = 3.0
@@ -263,21 +197,17 @@ def weierstrass_func(x, nx, Os, Mr, r_flag):
         for j in range(k_max + 1):
             a_pow = a ** j
             b_pow = b ** j
-            s += a_pow * math.cos(2.0 * PI * b_pow * (y3[i] + 0.5))
+            s += a_pow * math.cos(2.0 * PI * b_pow * (z2[i] + 0.5))
             sum2 += a_pow * math.cos(2.0 * PI * b_pow * 0.5)
         f += s
     f -= nx * sum2
     return f
 
 
-def griewank_func(x, nx, Os, Mr, r_flag):
+def griewank_func(x, nx, Os):
     y = shiftfunc(x, Os)
     y = [v * 600.0 / 100.0 for v in y]
-    if r_flag == 1:
-        z = rotatefunc(y, Mr, nx)
-    else:
-        z = y
-    z2 = [z[i] * math.pow(100.0, 1.0 * i / (nx - 1) / 2.0) for i in range(nx)]
+    z2 = [y[i] * math.pow(100.0, 1.0 * i / (nx - 1) / 2.0) for i in range(nx)]
 
     s = 0.0
     p = 1.0
@@ -287,74 +217,44 @@ def griewank_func(x, nx, Os, Mr, r_flag):
     return 1.0 + s / 4000.0 - p
 
 
-def rastrigin_func(x, nx, Os, Mr, r_flag):
+def rastrigin_func(x, nx, Os):
     alpha = 10.0
     beta = 0.2
     y = shiftfunc(x, Os)
     y = [v * 5.12 / 100.0 for v in y]
-    if r_flag == 1:
-        z = rotatefunc(y, Mr, nx)
-    else:
-        z = y
-    y2 = oszfunc(z)
+    y2 = oszfunc(y)
     z2 = asyfunc(y2, beta)
-    if r_flag == 1:
-        Mr2 = Mr[nx * nx:]
-        y3 = rotatefunc(z2, Mr2, nx)
-    else:
-        y3 = z2
     for i in range(nx):
-        y3[i] *= math.pow(alpha, 1.0 * i / (nx - 1) / 2.0)
-    if r_flag == 1:
-        z3 = rotatefunc(y3, Mr, nx)
-    else:
-        z3 = y3
+        z2[i] *= math.pow(alpha, 1.0 * i / (nx - 1) / 2.0)
     f = 0.0
     for i in range(nx):
-        f += z3[i] * z3[i] - 10.0 * math.cos(2.0 * PI * z3[i]) + 10.0
+        f += z2[i] * z2[i] - 10.0 * math.cos(2.0 * PI * z2[i]) + 10.0
     return f
 
 
-def step_rastrigin_func(x, nx, Os, Mr, r_flag):
+def step_rastrigin_func(x, nx, Os):
     alpha = 10.0
     beta = 0.2
     y = shiftfunc(x, Os)
     y = [v * 5.12 / 100.0 for v in y]
-    if r_flag == 1:
-        z = rotatefunc(y, Mr, nx)
-    else:
-        z = y
     for i in range(nx):
-        if abs(z[i]) > 0.5:
-            z[i] = math.floor(2.0 * z[i] + 0.5) / 2.0
-    y2 = oszfunc(z)
+        if abs(y[i]) > 0.5:
+            y[i] = math.floor(2.0 * y[i] + 0.5) / 2.0
+    y2 = oszfunc(y)
     z2 = asyfunc(y2, beta)
-    if r_flag == 1:
-        Mr2 = Mr[nx * nx:]
-        y3 = rotatefunc(z2, Mr2, nx)
-    else:
-        y3 = z2
     for i in range(nx):
-        y3[i] *= math.pow(alpha, 1.0 * i / (nx - 1) / 2.0)
-    if r_flag == 1:
-        z3 = rotatefunc(y3, Mr, nx)
-    else:
-        z3 = y3
+        z2[i] *= math.pow(alpha, 1.0 * i / (nx - 1) / 2.0)
     f = 0.0
     for i in range(nx):
-        f += z3[i] * z3[i] - 10.0 * math.cos(2.0 * PI * z3[i]) + 10.0
+        f += z2[i] * z2[i] - 10.0 * math.cos(2.0 * PI * z2[i]) + 10.0
     return f
 
 
-def schwefel_func(x, nx, Os, Mr, r_flag):
+def schwefel_func(x, nx, Os):
     y = shiftfunc(x, Os)
     y = [v * 1000.0 / 100.0 for v in y]
-    if r_flag == 1:
-        z = rotatefunc(y, Mr, nx)
-    else:
-        z = y
-    y2 = [z[i] * math.pow(10.0, 1.0 * i / (nx - 1) / 2.0) for i in range(nx)]
-    z2 = [y2[i] + 4.209687462275036e+002 for i in range(nx)]
+    z2 = [y[i] * math.pow(10.0, 1.0 * i / (nx - 1) / 2.0) for i in range(nx)]
+    z2 = [z2[i] + 4.209687462275036e+002 for i in range(nx)]
     f = 0.0
     for i in range(nx):
         zi = z2[i]
@@ -374,26 +274,17 @@ def schwefel_func(x, nx, Os, Mr, r_flag):
     return f
 
 
-def katsuura_func(x, nx, Os, Mr, r_flag):
+def katsuura_func(x, nx, Os):
     y = shiftfunc(x, Os)
     y = [v * 5.0 / 100.0 for v in y]
-    if r_flag == 1:
-        z = rotatefunc(y, Mr, nx)
-    else:
-        z = y
-    z2 = [z[i] * math.pow(100.0, 1.0 * i / (nx - 1) / 2.0) for i in range(nx)]
-    if r_flag == 1:
-        Mr2 = Mr[nx * nx:]
-        y2 = rotatefunc(z2, Mr2, nx)
-    else:
-        y2 = z2
+    z2 = [y[i] * math.pow(100.0, 1.0 * i / (nx - 1) / 2.0) for i in range(nx)]
     tmp3 = math.pow(1.0 * nx, 1.2)
     f = 1.0
     for i in range(nx):
         temp = 0.0
         for j in range(1, 33):
             tmp1 = math.pow(2.0, j)
-            tmp2 = tmp1 * y2[i]
+            tmp2 = tmp1 * z2[i]
             temp += abs(tmp2 - math.floor(tmp2 + 0.5)) / tmp1
         f *= math.pow(1.0 + (i + 1) * temp, 10.0 / tmp3)
     tmp1 = 10.0 / (nx * nx)
@@ -401,7 +292,7 @@ def katsuura_func(x, nx, Os, Mr, r_flag):
     return f
 
 
-def bi_rastrigin_func(x, nx, Os, Mr, r_flag):
+def bi_rastrigin_func(x, nx, Os):
     mu0 = 2.5
     d = 1.0
     s = 1.0 - 1.0 / (2.0 * math.sqrt(nx + 20.0) - 8.2)
@@ -416,17 +307,8 @@ def bi_rastrigin_func(x, nx, Os, Mr, r_flag):
             tmpx[i] *= -1.0
     z = tmpx[:]  # copy
     tmpx2 = [tmpx[i] + mu0 for i in range(nx)]
-    if r_flag == 1:
-        y2 = rotatefunc(z, Mr, nx)
-    else:
-        y2 = z
     for i in range(nx):
-        y2[i] *= math.pow(100.0, 1.0 * i / (nx - 1) / 2.0)
-    if r_flag == 1:
-        Mr2 = Mr[nx * nx:]
-        z2 = rotatefunc(y2, Mr2, nx)
-    else:
-        z2 = y2
+        z[i] *= math.pow(100.0, 1.0 * i / (nx - 1) / 2.0)
 
     tmp1 = 0.0
     tmp2 = 0.0
@@ -439,7 +321,7 @@ def bi_rastrigin_func(x, nx, Os, Mr, r_flag):
 
     tmp = 0.0
     for i in range(nx):
-        tmp += math.cos(2.0 * PI * z2[i])
+        tmp += math.cos(2.0 * PI * z[i])
 
     if tmp1 < tmp2:
         f = tmp1
@@ -449,14 +331,10 @@ def bi_rastrigin_func(x, nx, Os, Mr, r_flag):
     return f
 
 
-def grie_rosen_func(x, nx, Os, Mr, r_flag):
+def grie_rosen_func(x, nx, Os):
     y = shiftfunc(x, Os)
     y = [v * 5.0 / 100.0 for v in y]
-    if r_flag == 1:
-        z = rotatefunc(y, Mr, nx)
-    else:
-        z = y
-    z = [v + 1.0 for v in z]
+    z = [v + 1.0 for v in y]
     f = 0.0
     for i in range(nx - 1):
         tmp1 = z[i] * z[i] - z[i + 1]
@@ -470,188 +348,28 @@ def grie_rosen_func(x, nx, Os, Mr, r_flag):
     return f
 
 
-def escaffer6_func(x, nx, Os, Mr, r_flag):
+def escaffer6_func(x, nx, Os):
     y = shiftfunc(x, Os)
-    if r_flag == 1:
-        z = rotatefunc(y, Mr, nx)
-    else:
-        z = y
-    y2 = asyfunc(z, 0.5)
-    if r_flag == 1:
-        Mr2 = Mr[nx * nx:]
-        z2 = rotatefunc(y2, Mr2, nx)
-    else:
-        z2 = y2
+    y2 = asyfunc(y, 0.5)
     f = 0.0
     for i in range(nx - 1):
-        temp1 = math.sin(math.sqrt(z2[i] * z2[i] + z2[i + 1] * z2[i + 1]))
+        temp1 = math.sin(math.sqrt(y2[i] * y2[i] + y2[i + 1] * y2[i + 1]))
         temp1 = temp1 * temp1
-        temp2 = 1.0 + 0.001 * (z2[i] * z2[i] + z2[i + 1] * z2[i + 1])
+        temp2 = 1.0 + 0.001 * (y2[i] * y2[i] + y2[i + 1] * y2[i + 1])
         f += 0.5 + (temp1 - 0.5) / (temp2 * temp2)
-    temp1 = math.sin(math.sqrt(z2[nx - 1] * z2[nx - 1] + z2[0] * z2[0]))
+    temp1 = math.sin(math.sqrt(y2[nx - 1] * y2[nx - 1] + y2[0] * y2[0]))
     temp1 = temp1 * temp1
-    temp2 = 1.0 + 0.001 * (z2[nx - 1] * z2[nx - 1] + z2[0] * z2[0])
+    temp2 = 1.0 + 0.001 * (y2[nx - 1] * y2[nx - 1] + y2[0] * y2[0])
     f += 0.5 + (temp1 - 0.5) / (temp2 * temp2)
     return f
-
-
-# --- composition functions ---
-
-
-def cf01(x, nx, Os, Mr, r_flag):
-    cf_num = 5
-    fit = [0.0] * cf_num
-    delta = [10.0, 20.0, 30.0, 40.0, 50.0]
-    bias = [0.0, 100.0, 200.0, 300.0, 400.0]
-
-    i = 0
-    fit[i] = rosenbrock_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    fit[i] = 10000.0 * fit[i] / 1e4
-    i = 1
-    fit[i] = dif_powers_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    fit[i] = 10000.0 * fit[i] / 1e10
-    i = 2
-    fit[i] = bent_cigar_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    fit[i] = 10000.0 * fit[i] / 1e30
-    i = 3
-    fit[i] = discus_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    fit[i] = 10000.0 * fit[i] / 1e10
-    i = 4
-    fit[i] = sphere_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], 0)
-    fit[i] = 10000.0 * fit[i] / 1e5
-
-    return cf_cal(x, nx, Os, delta, bias, fit, cf_num)
-
-
-def cf02(x, nx, Os, Mr, r_flag):
-    cf_num = 3
-    fit = [0.0] * cf_num
-    delta = [20.0, 20.0, 20.0]
-    bias = [0.0, 100.0, 200.0]
-    for i in range(cf_num):
-        fit[i] = schwefel_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    return cf_cal(x, nx, Os, delta, bias, fit, cf_num)
-
-
-def cf03(x, nx, Os, Mr, r_flag):
-    cf_num = 3
-    fit = [0.0] * cf_num
-    delta = [20.0, 20.0, 20.0]
-    bias = [0.0, 100.0, 200.0]
-    for i in range(cf_num):
-        fit[i] = schwefel_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    return cf_cal(x, nx, Os, delta, bias, fit, cf_num)
-
-
-def cf04(x, nx, Os, Mr, r_flag):
-    cf_num = 3
-    fit = [0.0] * cf_num
-    delta = [20.0, 20.0, 20.0]
-    bias = [0.0, 100.0, 200.0]
-    i = 0
-    fit[i] = schwefel_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    fit[i] = 1000.0 * fit[i] / 4e3
-    i = 1
-    fit[i] = rastrigin_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    fit[i] = 1000.0 * fit[i] / 1e3
-    i = 2
-    fit[i] = weierstrass_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    fit[i] = 1000.0 * fit[i] / 400.0
-    return cf_cal(x, nx, Os, delta, bias, fit, cf_num)
-
-
-def cf05(x, nx, Os, Mr, r_flag):
-    cf_num = 3
-    fit = [0.0] * cf_num
-    delta = [10.0, 30.0, 50.0]
-    bias = [0.0, 100.0, 200.0]
-    i = 0
-    fit[i] = schwefel_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    fit[i] = 1000.0 * fit[i] / 4e3
-    i = 1
-    fit[i] = rastrigin_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    fit[i] = 1000.0 * fit[i] / 1e3
-    i = 2
-    fit[i] = weierstrass_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    fit[i] = 1000.0 * fit[i] / 400.0
-    return cf_cal(x, nx, Os, delta, bias, fit, cf_num)
-
-
-def cf06(x, nx, Os, Mr, r_flag):
-    cf_num = 5
-    fit = [0.0] * cf_num
-    delta = [10.0, 10.0, 10.0, 10.0, 10.0]
-    bias = [0.0, 100.0, 200.0, 300.0, 400.0]
-    i = 0
-    fit[i] = schwefel_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    fit[i] = 1000.0 * fit[i] / 4e3
-    i = 1
-    fit[i] = rastrigin_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    fit[i] = 1000.0 * fit[i] / 1e3
-    i = 2
-    fit[i] = ellips_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    fit[i] = 1000.0 * fit[i] / 1e10
-    i = 3
-    fit[i] = weierstrass_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    fit[i] = 1000.0 * fit[i] / 400.0
-    i = 4
-    fit[i] = griewank_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    fit[i] = 1000.0 * fit[i] / 100.0
-    return cf_cal(x, nx, Os, delta, bias, fit, cf_num)
-
-
-def cf07(x, nx, Os, Mr, r_flag):
-    cf_num = 5
-    fit = [0.0] * cf_num
-    delta = [10.0, 10.0, 10.0, 20.0, 20.0]
-    bias = [0.0, 100.0, 200.0, 300.0, 400.0]
-    i = 0
-    fit[i] = griewank_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    fit[i] = 10000.0 * fit[i] / 100.0
-    i = 1
-    fit[i] = rastrigin_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    fit[i] = 10000.0 * fit[i] / 1e3
-    i = 2
-    fit[i] = schwefel_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    fit[i] = 10000.0 * fit[i] / 4e3
-    i = 3
-    fit[i] = weierstrass_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    fit[i] = 10000.0 * fit[i] / 400.0
-    i = 4
-    fit[i] = sphere_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], 0)
-    fit[i] = 10000.0 * fit[i] / 1e5
-    return cf_cal(x, nx, Os, delta, bias, fit, cf_num)
-
-
-def cf08(x, nx, Os, Mr, r_flag):
-    cf_num = 5
-    fit = [0.0] * cf_num
-    delta = [10.0, 20.0, 30.0, 40.0, 50.0]
-    bias = [0.0, 100.0, 200.0, 300.0, 400.0]
-    i = 0
-    fit[i] = grie_rosen_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    fit[i] = 10000.0 * fit[i] / 4e3
-    i = 1
-    fit[i] = schaffer_F7_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    fit[i] = 10000.0 * fit[i] / 4e6
-    i = 2
-    fit[i] = schwefel_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    fit[i] = 10000.0 * fit[i] / 4e3
-    i = 3
-    fit[i] = escaffer6_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], r_flag)
-    fit[i] = 10000.0 * fit[i] / 2e7
-    i = 4
-    fit[i] = sphere_func(x, nx, Os[i * nx:(i + 1) * nx], Mr[i * nx * nx:], 0)
-    fit[i] = 10000.0 * fit[i] / 1e5
-    return cf_cal(x, nx, Os, delta, bias, fit, cf_num)
 
 
 # --- wrapper for all functions ---
 
 
-def test_func(x_flat, nx, mx, func_num, OShift, M):
+def test_func(x_flat, nx, mx, func_num, OShift):
     """
-    Evaluate CEC13 test functions.
+    Evaluate test functions without rotation.
 
     x_flat: list of length mx*nx, concatenated particles.
     Returns list of length mx with fitness values.
@@ -660,64 +378,49 @@ def test_func(x_flat, nx, mx, func_num, OShift, M):
     for i in range(mx):
         xi = x_flat[i * nx:(i + 1) * nx]
         if func_num == 1:
-            f[i] = sphere_func(xi, nx, OShift, M, 0)
+            f[i] = sphere_func(xi, nx, OShift)
         elif func_num == 2:
-            f[i] = ellips_func(xi, nx, OShift, M, 1)
+            f[i] = ellips_func(xi, nx, OShift)
         elif func_num == 3:
-            f[i] = bent_cigar_func(xi, nx, OShift, M, 1)
+            f[i] = bent_cigar_func(xi, nx, OShift)
         elif func_num == 4:
-            f[i] = discus_func(xi, nx, OShift, M, 1)
+            f[i] = discus_func(xi, nx, OShift)
         elif func_num == 5:
-            f[i] = dif_powers_func(xi, nx, OShift, M, 0)
+            f[i] = dif_powers_func(xi, nx, OShift)
         elif func_num == 6:
-            f[i] = rosenbrock_func(xi, nx, OShift, M, 1)
+            f[i] = rosenbrock_func(xi, nx, OShift)
         elif func_num == 7:
-            f[i] = schaffer_F7_func(xi, nx, OShift, M, 1)
+            f[i] = schaffer_F7_func(xi, nx, OShift)
         elif func_num == 8:
-            f[i] = ackley_func(xi, nx, OShift, M, 1)
+            f[i] = ackley_func(xi, nx, OShift)
         elif func_num == 9:
-            f[i] = weierstrass_func(xi, nx, OShift, M, 1)
+            f[i] = weierstrass_func(xi, nx, OShift)
         elif func_num == 10:
-            f[i] = griewank_func(xi, nx, OShift, M, 1)
+            f[i] = griewank_func(xi, nx, OShift)
         elif func_num == 11:
-            f[i] = rastrigin_func(xi, nx, OShift, M, 0)
+            f[i] = rastrigin_func(xi, nx, OShift)
         elif func_num == 12:
-            f[i] = rastrigin_func(xi, nx, OShift, M, 1)
+            f[i] = rastrigin_func(xi, nx, OShift)  # Same as 11 without rotation
         elif func_num == 13:
-            f[i] = step_rastrigin_func(xi, nx, OShift, M, 1)
+            f[i] = step_rastrigin_func(xi, nx, OShift)
         elif func_num == 14:
-            f[i] = schwefel_func(xi, nx, OShift, M, 0)
+            f[i] = schwefel_func(xi, nx, OShift)
         elif func_num == 15:
-            f[i] = schwefel_func(xi, nx, OShift, M, 1)
+            f[i] = schwefel_func(xi, nx, OShift)  # Same as 14 without rotation
         elif func_num == 16:
-            f[i] = katsuura_func(xi, nx, OShift, M, 1)
+            f[i] = katsuura_func(xi, nx, OShift)
         elif func_num == 17:
-            f[i] = bi_rastrigin_func(xi, nx, OShift, M, 0)
+            f[i] = bi_rastrigin_func(xi, nx, OShift)
         elif func_num == 18:
-            f[i] = bi_rastrigin_func(xi, nx, OShift, M, 1)
+            f[i] = bi_rastrigin_func(xi, nx, OShift)  # Same as 17 without rotation
         elif func_num == 19:
-            f[i] = grie_rosen_func(xi, nx, OShift, M, 1)
+            f[i] = grie_rosen_func(xi, nx, OShift)
         elif func_num == 20:
-            f[i] = escaffer6_func(xi, nx, OShift, M, 1)
-        elif func_num == 21:
-            f[i] = cf01(xi, nx, OShift, M, 1)
-        elif func_num == 22:
-            f[i] = cf02(xi, nx, OShift, M, 0)
-        elif func_num == 23:
-            f[i] = cf03(xi, nx, OShift, M, 1)
-        elif func_num == 24:
-            f[i] = cf04(xi, nx, OShift, M, 1)
-        elif func_num == 25:
-            f[i] = cf05(xi, nx, OShift, M, 1)
-        elif func_num == 26:
-            f[i] = cf06(xi, nx, OShift, M, 1)
-        elif func_num == 27:
-            f[i] = cf07(xi, nx, OShift, M, 1)
-        elif func_num == 28:
-            f[i] = cf08(xi, nx, OShift, M, 1)
+            f[i] = escaffer6_func(xi, nx, OShift)
         else:
             raise ValueError(f"Unknown func_num: {func_num}")
     return f
+
 
 def main():
     T_max = 500      # PSO run time
@@ -740,23 +443,6 @@ def main():
     pfx = [0.0] * np
     pfv = [0.0] * np
 
-    x_bound = [100.0] * nx  # unused but kept for parity
-
-    # --- read rotation matrices M_D{nx}.txt ---
-    m_file = f"./inst/extdata/M_D{nx}.txt"
-    try:
-        with open(m_file, "r") as fpt:
-            tokens = fpt.read().split()
-    except OSError:
-        raise RuntimeError(f"Cannot open input file for reading: {m_file}")
-
-    expected_M = cf_num * nx * nx
-    if len(tokens) < expected_M:
-        raise RuntimeError(
-            f"Not enough values in {m_file}: expected {expected_M}, got {len(tokens)}"
-        )
-    M = [float(tok) for tok in tokens[:expected_M]]
-
     # --- read shift data shift_data.txt ---
     s_file = "./inst/extdata/shift_data.txt"
     try:
@@ -777,8 +463,8 @@ def main():
     summary_file = "PSO_best_params.txt"
 
     with open(grid_file, "w") as grid_out, open(summary_file, "w") as summary_out:
-        # loop over functions 1..28
-        for func_num in range(1, 29):
+        # loop over functions 1..20
+        for func_num in range(1, 21):
             print(f"Optimising PSO params for function {func_num}")
             best_mean = INF
             best_a = None
@@ -814,8 +500,8 @@ def main():
                         oo = False
                         t = 0
                         while t < T_max:
-                            fx = test_func(x, nx, np, func_num, OShift, M)
-                            fv = test_func(v, nx, np, func_num, OShift, M)
+                            fx = test_func(x, nx, np, func_num, OShift)
+                            fv = test_func(v, nx, np, func_num, OShift)
 
                             # update personal / global best for x
                             for n in range(np):
@@ -885,150 +571,6 @@ def main():
                 f"func {func_num}: best_a={best_a} best_w={best_w} mean_best={best_mean}\n"
             )
             summary_out.flush()
-
-
-# def main():
-#     T_max = 500      # PSO run time
-#     rr = 10          # trials
-#     nx = 5           # dimension
-#     np = 20          # number of particles
-#     cf_num = 10
-#     sz = 200.0
-#
-#     # allocate arrays (same shapes as C code)
-#     x = [0.0] * (np * nx)
-#     v = [0.0] * (np * nx)
-#     px = [0.0] * (np * nx)
-#     gx = [0.0] * nx
-#     pv = [0.0] * (np * nx)  # kept for parity with C, not used in active update
-#     gv = [0.0] * nx         # kept for parity with C, not used in active update
-#
-#     fx = [0.0] * np
-#     fv = [0.0] * np
-#     pfx = [0.0] * np
-#     pfv = [0.0] * np
-#
-#     x_bound = [100.0] * nx  # not used further, but matches C code
-#
-#     # --- read rotation matrices M_D{nx}.txt ---
-#     m_file = f"./inst/extdata/M_D{nx}.txt"
-#     try:
-#         with open(m_file, "r") as fpt:
-#             tokens = fpt.read().split()  # fscanf("%lf") equivalent
-#     except OSError:
-#         raise RuntimeError(f"Cannot open input file for reading: {m_file}")
-#
-#     expected_M = cf_num * nx * nx
-#     if len(tokens) < expected_M:
-#         raise RuntimeError(
-#             f"Not enough values in {m_file}: expected {expected_M}, got {len(tokens)}"
-#         )
-#     M = [float(tok) for tok in tokens[:expected_M]]
-#
-#     # --- read shift data shift_data.txt ---
-#     s_file = "./inst/extdata/shift_data.txt"
-#     try:
-#         with open(s_file, "r") as fpt:
-#             tokens = fpt.read().split()
-#     except OSError:
-#         raise RuntimeError(f"Cannot open input file for reading: {s_file}")
-#
-#     expected_O = cf_num * nx
-#     if len(tokens) < expected_O:
-#         raise RuntimeError(
-#             f"Not enough values in {s_file}: expected {expected_O}, got {len(tokens)}"
-#         )
-#     OShift = [float(tok) for tok in tokens[:expected_O]]
-#
-#     # --- open output file ---
-#     out_name = "D5N20T250R1f"
-#     with open(out_name, "w") as dat:
-#         w = -1.15
-#         while w < 1.150001:
-#             print(w)
-#             a = 0.05
-#             while a < 6.05:
-#                 ga = 0.0
-#                 a1 = 0.5 * a
-#                 a2 = a - a1
-#
-#                 for func_num in range(1, 29):  # 1..28
-#                     for _r in range(rr):
-#                         gfx = 1.0e15
-#                         gfv = 1.0e15
-#
-#                         # initialise swarm
-#                         for i in range(np * nx):
-#                             v[i] = (random.random() - 0.5) * 2.0
-#                             x[i] = (random.random() - 0.5) * sz
-#                             px[i] = x[i]
-#                         for j in range(nx):
-#                             gx[j] = (random.random() - 0.5) * sz
-#
-#                         # reset personal best fitness for this run
-#                         for i in range(np):
-#                             pfx[i] = INF
-#                             pfv[i] = INF
-#
-#                         oo = False
-#                         t = 0
-#                         while t < T_max:
-#                             fx = test_func(x, nx, np, func_num, OShift, M)
-#                             fv = test_func(v, nx, np, func_num, OShift, M)
-#
-#                             # update personal / global best for x
-#                             for n in range(np):
-#                                 if fx[n] < pfx[n]:
-#                                     pfx[n] = fx[n]
-#                                     base = n * nx
-#                                     for j in range(nx):
-#                                         px[base + j] = x[base + j]
-#                                 if fx[n] < gfx:
-#                                     gfx = fx[n]
-#                                     base = n * nx
-#                                     for j in range(nx):
-#                                         gx[j] = x[base + j]
-#
-#                             # update personal / global best for v (not used in current update rule)
-#                             for n in range(np):
-#                                 if fv[n] < pfv[n]:
-#                                     pfv[n] = fv[n]
-#                                     base = n * nx
-#                                     for j in range(nx):
-#                                         pv[base + j] = v[base + j]
-#                                 if fv[n] < gfv:
-#                                     gfv = fv[n]
-#                                     base = n * nx
-#                                     for j in range(nx):
-#                                         gv[j] = v[base + j]
-#
-#                             # velocity and position update
-#                             for i in range(np * nx):
-#                                 v[i] = (
-#                                     w * v[i]
-#                                     + a1 * random.random() * (px[i] - x[i])
-#                                     + a2 * random.random() * (gx[i % nx] - x[i])
-#                                 )
-#                                 x[i] += v[i]
-#
-#                                 if abs(x[i]) > 1.0e6 or abs(v[i]) > 1.0e6:
-#                                     oo = True
-#
-#                             if oo:
-#                                 break
-#                             t += 1
-#
-#                         ga += gfx if gfx < gfv else gfv
-#
-#                 if ga > 100000.0:
-#                     ga = 100000.0
-#                 dat.write(f"{a} {w} {ga / (28.0 * rr)}\n")
-#                 a += 0.1
-#
-#             dat.write("\n")
-#             dat.flush()
-#             w += 0.05
-
 
 
 if __name__ == "__main__":
